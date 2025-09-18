@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.ManagedLibs
+/.vs
+/bin/Debug/netstandard2.1
+/NStrip.exe
+/obj
+/References.Items.props
