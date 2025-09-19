@@ -8,6 +8,10 @@ using System.Collections.Generic;
 using ABI_RC.Core.Player;
 using System.Text.RegularExpressions;
 using System;
+using ABI.CCK.Components;
+using ABI_RC.Core.Savior;
+using ABI_RC.Systems.GameEventSystem;
+using ABI_RC.Core.Util;
 
 
 namespace PlayerColorOutfits
@@ -61,6 +65,10 @@ namespace PlayerColorOutfits
             {
                 LoadConfig();
             }
+
+            // Add listners so stuff happens.
+            CVRGameEventSystem.Avatar.OnLocalAvatarLoad.AddListener(OnLocalAvatarLoaded);
+            CVRGameEventSystem.Spawnable.OnPropSpawned.AddListener(OnLocalPropLoaded);
         }
 
         /// <summary>
@@ -191,84 +199,71 @@ namespace PlayerColorOutfits
             MelonLogger.Msg($"Loaded pallet changes for {avatar_tally} avatars and {prop_tally} props.");
         }
 
-        [HarmonyPatch]
-        internal class HarmonyPatches
+        /// <summary>
+        /// Change the pallet based on the new avatar's guid.
+        /// 
+        /// This should only be run on the local avatar.
+        /// </summary>
+        /// <param name="guid">guid to search for the pallet of.</param>
+        /// <param name="is_avatar">Weather the object is an avatar or prop.</param>
+        private static void ChangePalletFromObject(string guid, string? spanwer)
         {
-            /// <summary>
-            /// Patch to SetupAvatar to change the pallet.
-            /// 
-            /// Only checks the local avatar, but may run for remote avatar changes as well.
-            /// For some reason if this patched method takes to long, SetupAvatar will be re-run, creating an infinite loop.
-            /// </summary>
-            /// <param name="avatarObject">unused</param>
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlayerBase), nameof(PlayerBase.SetupAvatar))]
-            internal static void SetupAvatar(GameObject avatarObject)
+            PlayerColorPallet pallet;
+            if (spanwer == null)
             {
-                string local_avatar_id = PlayerSetup.Instance.AvatarMetadata.AssetId;
-                local_avatar_id = local_avatar_id.StartsWith("a+") ? local_avatar_id.Substring(2) : local_avatar_id;  // Strip the a+ thing.
-                PlayerColorPallet pallet;
-                if (AvatarIds.TryGetValue(local_avatar_id, out pallet))
+                guid = guid.StartsWith("a+") ? guid.Substring(2) : guid;  // Strip the a+ thing.
+                if (AvatarIds.TryGetValue(guid, out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {local_avatar_id}");
+                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {guid}");
                 }
-                else if(AvatarIds.TryGetValue("default", out pallet))
+                else if (AvatarIds.TryGetValue("default", out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of default.");
+                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of avatar default.");
+                }
+                else
+                {
+                    MelonLogger.Msg("Would change pallet from avatar but theres nothing to do...");
                 }
             }
-
-            /// <summary>
-            /// Patch to DropProp to change the pallete.
-            /// 
-            /// Only for the local player.
-            /// </summary>
-            /// <param name="propGuid">Prop guid to test for.</param>
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlayerSetup), nameof(PlayerSetup.DropProp))]
-            internal static void DropProp(string propGuid)
+            else if(MetaPort.Instance.ownerId == spanwer)  // Need to validate prop spawner
             {
-                string safe_prop_id = propGuid.StartsWith("p+") ? propGuid.Substring(2) : propGuid; // Strip the p+ thing.
-                PlayerColorPallet pallet;
-                if (PropIds.TryGetValue(safe_prop_id, out pallet))
+                guid = guid.StartsWith("p+") ? guid.Substring(2) : guid;  // Strip the p+ thing.
+                if (PropIds.TryGetValue(guid, out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Prop {safe_prop_id}");
+                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop {guid}");
                 }
                 else if (PropIds.TryGetValue("default", out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of default.");
+                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop default.");
+                }
+                else
+                {
+                    MelonLogger.Msg("Would change pallet from prop but theres nothing to do...");
                 }
             }
-
-            /// <summary>
-            /// Patch to SpawnProp to change the pallet.
-            /// 
-            /// Only for the local player.
-            /// </summary>
-            /// <param name="propGuid">Prop guid to test for.</param>
-            /// <param name="spawnPos">unused</param>
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlayerSetup), nameof(PlayerSetup.SpawnProp))]
-            internal static void SpawnProp(string propGuid, Vector3 spawnPos)
-            {
-                string safe_prop_id = propGuid.StartsWith("p+") ? propGuid.Substring(2) : propGuid; // Strip the p+ thing.
-                PlayerColorPallet pallet;
-                if (PropIds.TryGetValue(safe_prop_id, out pallet))
-                {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Prop {safe_prop_id}");
-                }
-                else if (PropIds.TryGetValue("default", out pallet))
-                {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of default.");
-                }
-            }
-
+            
         }
+
+        /// <summary>
+        /// Event listener for OnLocalAvatarLoad
+        /// 
+        /// Calls ChangePalletFromAvatar
+        /// </summary>
+        /// <param name="avatar">The avatar that was loaded.</param>
+        private void OnLocalAvatarLoaded(CVRAvatar avatar)
+            => ChangePalletFromObject(avatar.AssetInfo.objectId, null);
+
+        /// <summary>
+        /// Event listener for OnPropSpawned.
+        /// </summary>
+        /// <param name="s">unused</param>
+        /// <param name="prop">A prop data about the prop.</param>
+        private void OnLocalPropLoaded(string s, CVRSyncHelper.PropData prop)
+            => ChangePalletFromObject(prop.ObjectId, prop.SpawnedBy);
+
     }
 }
