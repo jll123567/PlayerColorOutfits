@@ -202,10 +202,10 @@ namespace PlayerColorOutfits
         /// <summary>
         /// Change the pallet based on the new avatar's guid.
         /// 
-        /// This should only be run on the local avatar.
+        /// This should only be run on the local avatar or local prop spawn.
         /// </summary>
         /// <param name="guid">guid to search for the pallet of.</param>
-        /// <param name="is_avatar">Weather the object is an avatar or prop.</param>
+        /// <param name="spanwer">For props, who spawned the prop. For avatars, null.</param>
         private static void ChangePalletFromObject(string guid, string? spanwer)
         {
             PlayerColorPallet pallet;
