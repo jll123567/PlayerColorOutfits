@@ -211,38 +211,28 @@ namespace PlayerColorOutfits
             PlayerColorPallet pallet;
             if (spanwer == null)
             {
-                guid = guid.StartsWith("a+") ? guid.Substring(2) : guid;  // Strip the a+ thing.
                 if (AvatarIds.TryGetValue(guid, out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {guid}");
+                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {guid}");
                 }
                 else if (AvatarIds.TryGetValue("default", out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of avatar default.");
-                }
-                else
-                {
-                    MelonLogger.Msg("Would change pallet from avatar but theres nothing to do...");
+                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of avatar default.");
                 }
             }
             else if(MetaPort.Instance.ownerId == spanwer)  // Need to validate prop spawner
             {
-                guid = guid.StartsWith("p+") ? guid.Substring(2) : guid;  // Strip the p+ thing.
                 if (PropIds.TryGetValue(guid, out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop {guid}");
+                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop {guid}");
                 }
                 else if (PropIds.TryGetValue("default", out pallet))
                 {
                     PlayerColorManager.ChangePlayerColor(pallet);
-                    MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop default.");
-                }
-                else
-                {
-                    MelonLogger.Msg("Would change pallet from prop but theres nothing to do...");
+                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop default.");
                 }
             }
             
