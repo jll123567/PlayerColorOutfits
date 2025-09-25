@@ -7,7 +7,7 @@ Chillout VR mod for changing your player color automatically when using certain 
 Install the [latest release](https://github.com/jll123567/PlayerColorOutfits/releases) and put the dll in your `<CVR installation folder>/mods` folder.
 
 Currently Player Colors are only available on the nightly branch,
-use the [nightly release](https://github.com/jll123567/PlayerColorOutfits/releases/tag/nightly-1.0.0) for the nightly branch.
+use the [nightly release](https://github.com/jll123567/PlayerColorOutfits/releases/tag/nightly-1.0.1) for the nightly branch.
 
 ## Configuration
 
