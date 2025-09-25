@@ -75,4 +75,4 @@ Will:
 
 ## Disclaimer
 
-[This modification is not affiliated, approved, or verified by the ChilloutVR team in any way whatsoever.
+This modification is not affiliated, approved, or verified by the ChilloutVR team in any way whatsoever.
