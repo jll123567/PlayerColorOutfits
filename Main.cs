@@ -1,18 +1,14 @@
 ﻿using ABI_RC.Systems.PlayerColors;
-using HarmonyLib;
-using System.Text;
-using MelonLoader;
-using UnityEngine;
-using System.IO;
-using System.Collections.Generic;
-using ABI_RC.Core.Player;
-using System.Text.RegularExpressions;
-using System;
 using ABI.CCK.Components;
 using ABI_RC.Core.Savior;
 using ABI_RC.Systems.GameEventSystem;
 using ABI_RC.Core.Util;
-
+using MelonLoader;
+using UnityEngine;
+using System.IO;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System;
 
 namespace PlayerColorOutfits
 {
@@ -25,13 +21,16 @@ namespace PlayerColorOutfits
     internal class Main : MelonMod
     {
         // Associate a content guid to a pallet.
-        public static Dictionary<string,PlayerColorPallet> PropIds = new Dictionary<string, PlayerColorPallet>();
-        public static Dictionary<string, PlayerColorPallet> AvatarIds = new Dictionary<string, PlayerColorPallet>();
-        
+        public static Dictionary<string,PlayerColors> AvatarOutfits = new Dictionary<string, PlayerColors>();
+        public static Dictionary<string, PlayerColors> PropOutfits = new Dictionary<string, PlayerColors>();
+
+        // Debugging
+        public static bool Debug = false;
+
         // Paths for files.
         private static readonly string ModDataFolder = Path.Combine("UserData", nameof(PlayerColorOutfits));
-        private static readonly string AvatarConfigPath = Path.Combine(ModDataFolder, "avatar_pallete.ini");
-        private static readonly string PropConfigPath = Path.Combine(ModDataFolder, "prop_pallete.ini");
+        private static readonly string AvatarConfigPath = Path.Combine(ModDataFolder, "outfits_avatar.txt");
+        private static readonly string PropConfigPath = Path.Combine(ModDataFolder, "outfits_props.txt");
 
         /// <summary>
         /// Just handle a funny thing.
@@ -41,10 +40,10 @@ namespace PlayerColorOutfits
             base.OnUpdate();
             if (Input.GetKeyDown(KeyCode.Pause))
             {
-                MelonLogger.Msg("Enjoy the forbidden pallet!");
-                PlayerColorManager.ChangePlayerColor(PlayerColorPallet.TotalPallets);
-                MelonLogger.Msg($"Your pallet is now: {PlayerColorManager.CurrentPallet.ToString()}");
+
+                LoadConfig();
             }
+                
         }
 
         /// <summary>
@@ -73,9 +72,6 @@ namespace PlayerColorOutfits
 
         /// <summary>
         /// Create a config file template
-        /// 
-        /// Config files are ini format
-        /// Each section is the pallet and can have a list of content guids.
         /// </summary>
         private void CreateConfigTemplate()
         {
@@ -83,31 +79,35 @@ namespace PlayerColorOutfits
             Directory.CreateDirectory(ModDataFolder);
             if (!File.Exists(AvatarConfigPath))
             {
-                StringBuilder template_content = new StringBuilder();
-                foreach (string pallet_name in Enum.GetNames(typeof(PlayerColorPallet)))
-                {
-                    if (!pallet_name.Equals("TotalPallets")) // While I appreciate it... this one does not help *me* in particular.
-                    {
-                        template_content.AppendLine($"[{pallet_name}]");
-                        template_content.AppendLine("");
-                    }
-                }
-                File.WriteAllText(AvatarConfigPath, template_content.ToString());
+                string template_content =
+                    "# List outfits for avatars in this file.\n" +
+                    "# Each outfit is a guid to match against, primary color swatch, secondary color swatch, and weather to use the primary color as the emission (true or false).\n" +
+                    "# Alternatively you can list a guid, a color preset, and weather to use the primary color as the emission.\n" +
+                    "# You can also use \"default\" in place of a guid to change to a pallet for object you didn't specify otherwise.\n" +
+                    "# For example: aaaaa-bbbb-cccc-dddd-1234567890ef, Blue, LightGray, true\n" +
+                    "# or:          default, Kaffee, false\n\n" +
+                    "# Below are the different swatches and presets you can use. Exact spelling and capitalization is required.\n" +
+                    "# Swatches: White Gray Red Orange Yellow Green DarkCyan Cyan Blue Magenta Purple Black LightGray RustyRed Brown LightBrown LightGreen GreenerTeal LightTeal SkyBlue FlamingoPink Amethyst\n" +
+                    "# Presets:  OceanMist SunsetGlow ForestWhisper RoyalDusk DesertBloom BlossomVeil TitaniumWhite WhereIsMyShader CottonCandy ChilloutVR Basis Unit01 Spooky Cherry Kaffee Bongo";
+                
+                File.WriteAllText(AvatarConfigPath, template_content);
             }
             if (!File.Exists(PropConfigPath))
             {
-                StringBuilder template_content = new StringBuilder();
-                foreach (string pallet_name in Enum.GetNames(typeof(PlayerColorPallet)))
-                {
-                    if (!pallet_name.Equals("TotalPallets"))
-                    {
-                        template_content.AppendLine($"[{pallet_name}]");
-                        template_content.AppendLine("");
-                    }
-                }
-                File.WriteAllText(PropConfigPath, template_content.ToString());
+                string template_content =
+                    "# List outfits for props in this file.\n" +
+                    "# Each outfit is a guid to match against, primary color swatch, secondary color swatch, and weather to use the primary color as the emission (true or false).\n" +
+                    "# Alternatively you can list a guid, a color preset, and weather to use the primary color as the emission.\n" +
+                    "# You can also use \"default\" in place of a guid to change to a pallet for object you didn't specify otherwise.\n" +
+                    "# For example: aaaaa-bbbb-cccc-dddd-1234567890ef, Blue, LightGray, true\n" +
+                    "# or:          default, Kaffee, false\n\n" +
+                    "# Below are the different swatches and presets you can use. Exact spelling and capitalization is required.\n" +
+                    "# Swatches: White Gray Red Orange Yellow Green DarkCyan Cyan Blue Magenta Purple Black LightGray RustyRed Brown LightBrown LightGreen GreenerTeal LightTeal SkyBlue FlamingoPink Amethyst\n" +
+                    "# Presets:  OceanMist SunsetGlow ForestWhisper RoyalDusk DesertBloom BlossomVeil TitaniumWhite WhereIsMyShader CottonCandy ChilloutVR Basis Unit01 Spooky Cherry Kaffee Bongo";
+
+                File.WriteAllText(PropConfigPath, template_content);
             }
-            
+
         }
 
         /// <summary>
@@ -116,87 +116,120 @@ namespace PlayerColorOutfits
         /// </summary>
         private void LoadConfig()
         {
-            string header_pattern = "^\\[([A-Za-z]+)\\]";
-            string guid_pattern = "^([ap]\\+)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
+            string swatch_outfit_pattern = "^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|default), *([A-Za-z]+), *([A-Za-z]+), *(true|false) *$";
+            string preset_outfit_pattern = "^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|default), *([A-Za-z]+), *(true|false) *$";
+            
+            int item_tally = 0;
 
-            int avatar_tally = 0;
-            int prop_tally = 0;
-
-            PlayerColorPallet pallete = (PlayerColorPallet)(-1); // -1 indicates an invalid pallete.
             foreach (string line in File.ReadLines(AvatarConfigPath))
             {
-
-                if (Regex.IsMatch(line,header_pattern))  // Palletes are ini format headers.
+                if (Regex.IsMatch(line, swatch_outfit_pattern))
                 {
-                    string pallete_name = Regex.Match(line, header_pattern).Groups[1].Value;
-                    try
-                    {
-                        if (pallete_name.Equals("TotalPallets")) throw new ArgumentException();  // While it is valid to the enum, its not a real pallete.
-                        pallete = Enum.Parse<PlayerColorPallet>(pallete_name);
+                    var matches = Regex.Match(line, swatch_outfit_pattern).Groups;
+                    string guid = matches[1].Value;
+                    string swatch_1 = matches[2].Value;
+                    string swatch_2 = matches[3].Value;
+                    string primary_as_emission = matches[4].Value;
 
-                    }
-                    catch (ArgumentException)
-                    {
+                    if (Debug) MelonLogger.Msg($"Pattern: {guid}, {swatch_1}, {swatch_2}, {primary_as_emission}");
 
-                        MelonLogger.Warning($"The pallet header [{pallete_name}] is not valid.\n Fix your {AvatarConfigPath} file.");
-                    }
-                    
+                    Color color_1;
+                    PlayerColorsUtility.ColorSwatchToColor.TryGetValue((PlayerColorSwatches)Enum.Parse(typeof(PlayerColorSwatches), swatch_1), out color_1);
+                    Color color_2;
+                    PlayerColorsUtility.ColorSwatchToColor.TryGetValue((PlayerColorSwatches)Enum.Parse(typeof(PlayerColorSwatches), swatch_2), out color_2);
+
+                    PlayerColors imported_color = new PlayerColors(color_1, color_2, Boolean.Parse(primary_as_emission));
+                    if (Debug) MelonLogger.Msg($"  Color: {imported_color.PrimaryColor}, {imported_color.SecondaryColor}, {imported_color.UsePrimaryAsEmission}");
+
+                    if (AvatarOutfits.ContainsKey(guid)) AvatarOutfits.Remove(guid);
+                    AvatarOutfits.TryAdd(guid, imported_color);
+
+                    item_tally++;
                 }
-                else if (Regex.IsMatch(line, guid_pattern))
-                {
-                    string guid = Regex.Match(line, guid_pattern).Groups[2].Value;
-                    if (((int)pallete) != -1) {
-                        AvatarIds.Add(guid, pallete);
-                        avatar_tally++;
-                    }
-                    else
-                    {
-                        MelonLogger.Warning($"The guid {guid} was not added to a pallete, it should be under a \"[<pallet name>]\" line in your {AvatarConfigPath}.");
-                    }
+                else if (Regex.IsMatch(line, preset_outfit_pattern)){
+                    var matches = Regex.Match(line, preset_outfit_pattern).Groups;
+                    string guid = matches[1].Value;
+                    string preset = matches[2].Value;
+                    string primary_as_emission = matches[3].Value;
+
+                    if (Debug) MelonLogger.Msg($"Pattern: {guid}, {preset}, {primary_as_emission}");
+
+                    ValueTuple<Color, Color> colors;
+                    PlayerColorsUtility.ColorPresetToColor.TryGetValue((PlayerColorPresets)Enum.Parse(typeof(PlayerColorPresets), preset), out colors);
+
+                    PlayerColors imported_color = new PlayerColors(colors.Item1, colors.Item2, Boolean.Parse(primary_as_emission));
+                    if (Debug) MelonLogger.Msg($"  Color: {imported_color.PrimaryColor}, {imported_color.SecondaryColor}, {imported_color.UsePrimaryAsEmission}");
+
+                    if (AvatarOutfits.ContainsKey(guid)) AvatarOutfits.Remove(guid);
+                    AvatarOutfits.TryAdd(guid, imported_color);
+
+                    item_tally++;
                 }
-                else if (Regex.IsMatch(line, "^default") && ! AvatarIds.ContainsKey("default"))
+                else if (Regex.IsMatch(line, "^#| *"))
                 {
-                    AvatarIds.Add("default", pallete);
+                    // Dont error for comments.
+                }
+                else
+                {
+                    MelonLogger.Error($"Bad config line: {line}");
                 }
             }
-
-            pallete = (PlayerColorPallet)(-1);
             foreach (string line in File.ReadLines(PropConfigPath))
             {
+                if (Regex.IsMatch(line, swatch_outfit_pattern))
+                {
+                    var matches = Regex.Match(line, swatch_outfit_pattern).Groups;
+                    string guid = matches[1].Value;
+                    string swatch_1 = matches[2].Value;
+                    string swatch_2 = matches[3].Value;
+                    string primary_as_emission = matches[4].Value;
 
-                if (Regex.IsMatch(line, header_pattern))  // Palletes are ini format headers.
-                {
-                    string pallete_name = Regex.Match(line, header_pattern).Groups[1].Value;
-                    try
-                    {
-                        if (pallete_name.Equals("TotalPallets")) throw new ArgumentException();  // While it is valid to the enum, its not a real pallete.
-                        pallete = Enum.Parse<PlayerColorPallet>(pallete_name);
-                    }
-                    catch (ArgumentException)
-                    {
+                    if (Debug) MelonLogger.Msg($"Pattern: {guid}, {swatch_1}, {swatch_2}, {primary_as_emission}");
 
-                        MelonLogger.Warning($"The pallet header [{pallete_name}] is not valid.\n Fix your {PropConfigPath} file.");
-                    }
+                    Color color_1;
+                    PlayerColorsUtility.ColorSwatchToColor.TryGetValue((PlayerColorSwatches)Enum.Parse(typeof(PlayerColorSwatches), swatch_1), out color_1);
+                    Color color_2;
+                    PlayerColorsUtility.ColorSwatchToColor.TryGetValue((PlayerColorSwatches)Enum.Parse(typeof(PlayerColorSwatches), swatch_2), out color_2);
+
+                    PlayerColors imported_color = new PlayerColors(color_1, color_2, Boolean.Parse(primary_as_emission));
+                    if (Debug) MelonLogger.Msg($"  Color: {imported_color.PrimaryColor}, {imported_color.SecondaryColor}, {imported_color.UsePrimaryAsEmission}");
+
+                    if (PropOutfits.ContainsKey(guid)) PropOutfits.Remove(guid);
+                    PropOutfits.TryAdd(guid, imported_color);
+
+                    item_tally++;
                 }
-                else if (Regex.IsMatch(line, guid_pattern))
+                else if (Regex.IsMatch(line, preset_outfit_pattern))
                 {
-                    string guid = Regex.Match(line, guid_pattern).Groups[2].Value;
-                    if (((int)pallete) != -1)
-                    {
-                        PropIds.Add(guid, pallete);
-                        prop_tally++;
-                    }
-                    else
-                    {
-                        MelonLogger.Warning($"The guid {guid} was not added to a pallete, it should be under a \"[<pallet name>]\" line in your {PropConfigPath}.");
-                    }
+                    var matches = Regex.Match(line, preset_outfit_pattern).Groups;
+                    string guid = matches[1].Value;
+                    string preset = matches[2].Value;
+                    string primary_as_emission = matches[3].Value;
+
+                    if (Debug) MelonLogger.Msg($"Pattern: {guid}, {preset}, {primary_as_emission}");
+
+                    ValueTuple<Color, Color> colors;
+                    PlayerColorsUtility.ColorPresetToColor.TryGetValue((PlayerColorPresets)Enum.Parse(typeof(PlayerColorPresets), preset), out colors);
+
+                    PlayerColors imported_color = new PlayerColors(colors.Item1, colors.Item2, Boolean.Parse(primary_as_emission));
+                    if (Debug) MelonLogger.Msg($"  Color: {imported_color.PrimaryColor}, {imported_color.SecondaryColor}, {imported_color.UsePrimaryAsEmission}");
+
+                    if (PropOutfits.ContainsKey(guid)) PropOutfits.Remove(guid);
+                    PropOutfits.TryAdd(guid, imported_color);
+
+                    item_tally++;
                 }
-                else if (Regex.IsMatch(line, "^default") && !PropIds.ContainsKey("default"))
+                else if (Regex.IsMatch(line, "^#| *"))
                 {
-                    PropIds.Add("default", pallete);
+                    // Dont error for comments.
+                }
+                else
+                {
+                    MelonLogger.Error($"Bad config line: {line}");
                 }
             }
-            MelonLogger.Msg($"Loaded pallet changes for {avatar_tally} avatars and {prop_tally} props.");
+
+            MelonLogger.Msg($"Loaded pallet changes for {item_tally} items.");
         }
 
         /// <summary>
@@ -208,31 +241,32 @@ namespace PlayerColorOutfits
         /// <param name="spanwer">For props, who spawned the prop. For avatars, null.</param>
         private static void ChangePalletFromObject(string guid, string? spanwer)
         {
-            PlayerColorPallet pallet;
+            if (Debug) MelonLogger.Msg($"Trying to change outfit: {guid}, {spanwer}");
+            PlayerColors pallet;
             if (spanwer == null)
             {
-                if (AvatarIds.TryGetValue(guid, out pallet))
+                if (AvatarOutfits.TryGetValue(guid, out pallet))
                 {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {guid}");
+                    PlayerColorsManager.ChangePlayerColor(pallet);
+                    if (Debug) MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of Avatar {guid}");
                 }
-                else if (AvatarIds.TryGetValue("default", out pallet))
+                else if (AvatarOutfits.TryGetValue("default", out pallet))
                 {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of avatar default.");
+                    PlayerColorsManager.ChangePlayerColor(pallet);
+                    if (Debug) MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of avatar default.");
                 }
             }
             else if(MetaPort.Instance.ownerId == spanwer)  // Need to validate prop spawner
             {
-                if (PropIds.TryGetValue(guid, out pallet))
+                if (PropOutfits.TryGetValue(guid, out pallet))
                 {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop {guid}");
+                    PlayerColorsManager.ChangePlayerColor(pallet);
+                    if (Debug) MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop {guid}");
                 }
-                else if (PropIds.TryGetValue("default", out pallet))
+                else if (PropOutfits.TryGetValue("default", out pallet))
                 {
-                    PlayerColorManager.ChangePlayerColor(pallet);
-                    //MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop default.");
+                    PlayerColorsManager.ChangePlayerColor(pallet);
+                    if (Debug) MelonLogger.Msg($"Changing pallete to {pallet.ToString()} because of prop default.");
                 }
             }
             
