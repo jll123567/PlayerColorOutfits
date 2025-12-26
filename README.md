@@ -13,56 +13,21 @@ use the [nightly release](https://github.com/jll123567/PlayerColorOutfits/releas
 
 To set what avatars/props change your color, open 
 
-`<CVR installation folder>/UserData/PlayerColorOutfits/avatar_pallete.ini` for avatars
+`<CVR installation folder>/UserData/PlayerColorOutfits/outfits_avatar.txt` for avatars
 
 or
 
-`<CVR installation folder>/UserData/PlayerColorOutfits/prop_pallete.ini` for props
+`<CVR installation folder>/UserData/PlayerColorOutfits/prop_avatar.txt` for props
 
 after you've run the mod at least once so it can generate those files.
 
-Then put the guid (double-click the item's picture in its details to copy it) under the header for the color you want to have when using that item.
+Each outfit is a guid to match against, primary color swatch, secondary color swatch, and weather to use the primary color as the emission (true or false).
+Alternatively you can list a guid, a color preset, and weather to use the primary color as the emission.
+You can also use "default" in place of a guid to change to a pallet for object you didn't specify otherwise.
+Each field is seperated by commas.
 
-You can also add `default` the same as guids to use that color when you use an avatar/prop that isn't in the list.
-
-If no default is specified, your color is not changed if the item isnt found in the config.
-
-### Example
-
-Avatars:
-
-```ini
-[ChilloutVR]
-avatar1
-
-[BaseV]
-avatar2
-
-[Unit01]
-default
-```
-
-Will:
-- Use ChilloutVR when in avatar1.
-- Use BaseV when in avatar2.
-- Use Unit01 when in anything else.
-
-Props:
-```ini
-[OceanMist]
-prop1
-
-[Spooky]
-
-[Cherry]
-prop2
-```
-
-Will:
-- Use OceanMist when you spawn prop1.
-- Use Cherry when you spawn prop2.
-- Not change your color when spawning other props (default wasn't set).
-- Not change to Spooky for any prop (there arent any set).
+For example: `aaaaa-bbbb-cccc-dddd-1234567890ef, Blue, LightGray, true`
+or: `default, Kaffee, false`
 
 ## Building
 
