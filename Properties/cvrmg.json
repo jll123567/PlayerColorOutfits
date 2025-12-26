@@ -1,0 +1,19 @@
+{
+    "name": "PlayerColorOutfits",
+    "modversion": "1.2.0",
+    "gameversion": "2025r181",
+    "loaderversion": "0.7.2-ci.2385",
+    "modtype": "Mod",
+    "author": "JillTheSomething",
+    "description": "Changes your player colors when you swich avatars/spawn props. Set with config files.",
+    "searchtags": [
+        "playercolor",
+        "color"
+    ],
+    "requirements": [
+    ],
+    "downloadlink": "https://github.com/jll123567/PlayerColorOutfits/releases/download/1.2.0/PlayerColorOutfits.dll",
+    "sourcelink": "https://github.com/jll123567/PlayerColorOutfits",
+    "changelog": "Inital Release",
+    "embedcolor": "#32ff32"
+}
