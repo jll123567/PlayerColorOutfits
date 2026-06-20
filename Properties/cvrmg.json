@@ -1,7 +1,8 @@
 {
+    "_id": 272,
     "name": "PlayerColorOutfits",
-    "modversion": "1.2.0",
-    "gameversion": "2025r181",
+    "modversion": "1.2.1",
+    "gameversion": "2026r182",
     "loaderversion": "0.7.2-ci.2385",
     "modtype": "Mod",
     "author": "JillTheSomething",
@@ -14,6 +15,6 @@
     ],
     "downloadlink": "https://github.com/jll123567/PlayerColorOutfits/releases/download/1.2.0/PlayerColorOutfits.dll",
     "sourcelink": "https://github.com/jll123567/PlayerColorOutfits",
-    "changelog": "Inital Release",
+    "changelog": "Update for r182",
     "embedcolor": "#32ff32"
 }

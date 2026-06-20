@@ -2,7 +2,7 @@
 using ABI.CCK.Components;
 using ABI_RC.Core.Savior;
 using ABI_RC.Systems.GameEventSystem;
-using ABI_RC.Core.Util;
+using ABI_RC.Core.PropManagement;
 using MelonLoader;
 using UnityEngine;
 using System.IO;
@@ -286,7 +286,7 @@ namespace PlayerColorOutfits
         /// </summary>
         /// <param name="s">unused</param>
         /// <param name="prop">A prop data about the prop.</param>
-        private void OnLocalPropLoaded(string s, CVRSyncHelper.PropData prop)
+        private void OnLocalPropLoaded(string s, PropSoul prop)
             => ChangePalletFromObject(prop.ObjectId, prop.SpawnedBy);
 
     }
